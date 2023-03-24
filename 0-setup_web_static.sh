@@ -1,51 +1,35 @@
 #!/usr/bin/env bash
-# Sets up your web servers for the deployment of web_static
+# Sets up a web server for deployment of web_static.
 
-if ! ( nginx -v &>/dev/null); then
-    sudo apt update -y -qq && \
-        sudo apt install -y nginx -qq
-fi
+apt-get update
+apt-get install -y nginx
 
-mkdir -p /data/web_static/releases/test
-mkdir -p /data/web_static/shared
+mkdir -p /data/web_static/releases/test/
+mkdir -p /data/web_static/shared/
+echo "Holberton School" > /data/web_static/releases/test/index.html
+ln -sf /data/web_static/releases/test/ /data/web_static/current
 
-html="<html>
-  <head>
-  </head>
-  <body>
-    Holberton School
-  </body>
-</html>"
+chown -R ubuntu /data/
+chgrp -R ubuntu /data/
 
-echo "$html" | tee /data/web_static/releases/test/index.html
+printf %s "server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    add_header X-Served-By $HOSTNAME;
+    root   /var/www/html;
+    index  index.html index.htm;
+    location /hbnb_static {
+        alias /data/web_static/current;
+        index index.html index.htm;
+    }
+    location /redirect_me {
+        return 301 http://cuberule.com/;
+    }
+    error_page 404 /404.html;
+    location /404 {
+      root /var/www/html;
+      internal;
+    }
+}" > /etc/nginx/sites-available/default
 
-if [ -h /data/web_static/current ]; then
-    sudo rm -f /data/web_static/current
-fi
-
-ln -s /data/web_static/releases/test/ /data/web_static/current
-
-sudo chown -R ubuntu:ubuntu /data/
-
-config="server {
-        listen 80 default_server;
-        listen [::]:80 default_server;
-        root /data/web_static/releases/test/index.html;
-        index index.html;
-        server_name _;
-        location /hbnb_static/ {
-			# try_files \$uri \$uri/ =404;
-			alias /data/web_static/current/;
-			autoindex off;
-        }
-
-}
-"
-
-echo "$config" | tee /etc/nginx/sites-available/default
-
-if [ "$(pgrep nginx | wc -l)" -le 0 ];then
-    service nginx start
-else
-    service nginx restart
-fi;
+service nginx restart

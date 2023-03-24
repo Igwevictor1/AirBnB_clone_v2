@@ -1,74 +1,75 @@
 #!/usr/bin/python3
-"""
-Fabric script to genereate tgz archive and deploy
-execute: fab -f 3-deploy_web_static.py deploy -i my_ssh_private_key -u ubuntu
-"""
-
+# Fabfile to create and distribute an archive to a web server.
+import os.path
 from datetime import datetime
-from fabric.api import *
-from os.path import exists, isdir
+from fabric.api import env
+from fabric.api import local
+from fabric.api import put
+from fabric.api import run
 
-
-env.hosts = ['34.239.160.19', '34.231.243.196']
+env.hosts = ["52.91.121.146", "3.85.136.181"]
 
 
 def do_pack():
-    """
-    making an archive on web_static folder
-    """
-
-    time = datetime.now()
-    archive = 'versions/web_static_' + time.strftime("%Y%m%d%H%M%S") + '.tgz'
-    local('mkdir -p versions')
-    if isdir("versions") is False:
+    """Create a tar gzipped archive of the directory web_static."""
+    dt = datetime.utcnow()
+    file = "versions/web_static_{}{}{}{}{}{}.tgz".format(dt.year,
+                                                         dt.month,
+                                                         dt.day,
+                                                         dt.hour,
+                                                         dt.minute,
+                                                         dt.second)
+    if os.path.isdir("versions") is False:
         if local("mkdir -p versions").failed is True:
             return None
-    if local("tar -cvzf {} web_static".format(archive)).failed is True:
+    if local("tar -cvzf {} web_static".format(file)).failed is True:
         return None
-    return archive
+    return file
 
 
 def do_deploy(archive_path):
+    """Distributes an archive to a web server.
+    Args:
+        archive_path (str): The path of the archive to distribute.
+    Returns:
+        If the file doesn't exist at archive_path or an error occurs - False.
+        Otherwise - True.
     """
-    deploying an archive to a server
-    """
-    if not exists(archive_path):
+    if os.path.isfile(archive_path) is False:
         return False
-    try:
-        archive_fname = archive_path.split('/')[-1]
-        basename = archive_fname.split('.')[0]
-        if put(archive_path, '/tmp/').failed:
-            return False
-        if run('mkdir -p /data/web_static/releases/{}'.format(
-                    basename)).failed:
-            return False
-        if run(('tar -xzf /tmp/{0}.tgz -C /data/web_static/releases' +
-                '/{0}').format(basename)).failed:
-            return False
-        if run(('mv /data/web_static/releases/{0}/web_static/* ' +
-                '/data/web_static/releases/{0}/').format(basename)).failed:
-            return False
-        if run('rm -rf /data/web_static/releases/{}/web_static'.format(
-                                                      basename)).failed:
-            return False
-        if run('rm -f /tmp/{}'.format(archive_fname)).failed:
-            return False
-        if run('rm -f /data/web_static/current').failed:
-            return False
-        if run(('ln -s /data/web_static/releases/{}' +
-                ' /data/web_static/current').format(basename)).failed:
-            return False
-        return True
-    except Exception:
+    file = archive_path.split("/")[-1]
+    name = file.split(".")[0]
+
+    if put(archive_path, "/tmp/{}".format(file)).failed is True:
         return False
+    if run("rm -rf /data/web_static/releases/{}/".
+           format(name)).failed is True:
+        return False
+    if run("mkdir -p /data/web_static/releases/{}/".
+           format(name)).failed is True:
+        return False
+    if run("tar -xzf /tmp/{} -C /data/web_static/releases/{}/".
+           format(file, name)).failed is True:
+        return False
+    if run("rm /tmp/{}".format(file)).failed is True:
+        return False
+    if run("mv /data/web_static/releases/{}/web_static/* "
+           "/data/web_static/releases/{}/".format(name, name)).failed is True:
+        return False
+    if run("rm -rf /data/web_static/releases/{}/web_static".
+           format(name)).failed is True:
+        return False
+    if run("rm -rf /data/web_static/current").failed is True:
+        return False
+    if run("ln -s /data/web_static/releases/{}/ /data/web_static/current".
+           format(name)).failed is True:
+        return False
+    return True
 
 
 def deploy():
-    """
-    deploying on the servers
-    """
-    file_name = do_pack()
-    if file_name is None:
+    """Create and distribute an archive to a web server."""
+    file = do_pack()
+    if file is None:
         return False
-    else:
-        return do_deploy(file_name)
+    return do_deploy(file)
