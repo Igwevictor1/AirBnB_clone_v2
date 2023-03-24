@@ -1,39 +1,40 @@
 #!/usr/bin/python3
-"""
-Script that starts a Flask web application
-"""
+""" A script that starts a flask web application """
 from flask import Flask
-
-
 app = Flask(__name__)
 
 
 @app.route('/', strict_slashes=False)
-def hello():
+def hello_hbnb():
+    """ Prints a Message when / is called """
     return 'Hello HBNB!'
 
 
 @app.route('/hbnb', strict_slashes=False)
-def holberon():
+def hbnb():
+    """ Prints a Message when /HBNB is called """
     return 'HBNB'
 
 
 @app.route('/c/<text>', strict_slashes=False)
-def c_text(text):
-    return "C {}" .format(text.replace("_", " "))
+def ciscfun(text):
+    """ Prints a Message when /c/<text> is called """
+    return 'C {}'.format(text.replace('_', ' '))
 
 
-@app.route('/python/', strict_slashes=False)
+@app.route('/python', strict_slashes=False)
 @app.route('/python/<text>', strict_slashes=False)
-def python_text(text='is cool'):
-    """ Function called with /python/<text> route """
-    return "Python {}".format(text.replace("_", " "))
+def pythoniscool(text='is cool'):
+    """ Prints a Message when /c/<text> is called """
+    return 'Python {}'.format(text.replace('_', ' '))
 
 
 @app.route('/number/<int:n>', strict_slashes=False)
-def is_a_number(n):
-    return "{} is a number".format(n)
+def number(n: int):
+    """ Prints a Message when /c/<text> is called """
+    return '{} is a number'.format(n)
 
 
 if __name__ == "__main__":
+    """ Main Function """
     app.run(host='0.0.0.0', port=5000)
